@@ -10,10 +10,10 @@ Tags: PayPal, subscription, membership, subscriptions, memberships, PayPal Butto
 Author: Scott Paterson
 Author URI: https://wpplugin.org
 License: GPL2
-Version: 1.1.6
+Version: 1.1.7
 */
 
-/*  Copyright 2014-2024 Scott Paterson
+/*  Copyright 2014-2025 Scott Paterson
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

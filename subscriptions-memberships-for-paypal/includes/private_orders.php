@@ -142,7 +142,7 @@ function wpeppsub_plugin_orders() {
 				
 				// delete
 				$delete_bare = '?page=wpeppsub_menu&action=delete&inline=true&order='.$item['ID'];
-				$delete_url = wp_nonce_url($delete_bare, 'bulk-'.$this->_args['plural']);
+				$delete_url = wp_nonce_url($delete_bare, 'bulk-orders');
 				
 				$actions = array(
 					'edit'      => '<a href="' . esc_url($view_url) . '">View</a>',
@@ -573,6 +573,12 @@ function wpeppsub_plugin_orders() {
 	
 	// admin orders page delete order
 	if (isset($_GET['action']) && $_GET['action'] == "delete" || isset($_GET['action2']) && $_GET['action2'] == "delete") {
+		
+		// verify nonce
+		if (!isset($_REQUEST['_wpnonce']) || !wp_verify_nonce($_REQUEST['_wpnonce'], 'bulk-orders')) {
+			wp_die(__('Security check failed.', 'text-domain'), __('Error', 'text-domain'), ['response' => 403]);
+		}
+		
 		
 		if ( !current_user_can( "manage_options" ) )  {
 			wp_die( __( "You do not have sufficient permissions to access this page. Please sign in as an administrator." ));

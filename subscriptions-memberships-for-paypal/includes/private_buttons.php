@@ -89,7 +89,7 @@ function wpeppsub_plugin_buttons() {
 				
 				// delete
 				$delete_bare = '?page=wpeppsub_buttons&action=delete&inline=true&product='.$item['ID'];
-				$delete_url = wp_nonce_url($delete_bare, 'bulk-'.$this->_args['plural']);
+				$delete_url = wp_nonce_url($delete_bare, 'bulk-products');
 				
 				$actions = array(
 					'edit'      => '<a href="' . esc_url($edit_url) . '">Edit</a>',
@@ -133,7 +133,7 @@ function wpeppsub_plugin_buttons() {
 						'delete'    => 'Delete'
 					);
 					return $actions;
-			}
+			}			
 			
 			public function process_bulk_action() {
 				if ( isset( $_GET['_wpnonce'] ) && ! empty( $_GET['_wpnonce'] ) ) {
@@ -141,7 +141,7 @@ function wpeppsub_plugin_buttons() {
 					$action = 'bulk-' . $this->_args['plural'];
 					
 					if ( ! wp_verify_nonce( $nonce, $action ) ) {
-						wp_die('Security check fail'); 
+						wp_die('Security check fail');
 					}
 				}
 			}
@@ -276,6 +276,12 @@ function wpeppsub_plugin_buttons() {
 		if ( !current_user_can( "manage_options" ) )  {
 			wp_die( __( "You do not have sufficient permissions to access this page. Please sign in as an administrator." ));
 		}
+		
+		// verify nonce
+		if (!isset($_REQUEST['_wpnonce']) || !wp_verify_nonce($_REQUEST['_wpnonce'], 'bulk-products')) {
+			wp_die(__('Security check failed.', 'text-domain'), __('Error', 'text-domain'), ['response' => 403]);
+		}
+		
 		
 		if(isset($_GET['inline'])) {
 			if ($_GET['inline'] == "true") {
