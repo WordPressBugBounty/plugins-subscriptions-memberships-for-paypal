@@ -40,14 +40,8 @@ function wpeppsub_listen_for_paypal_ipn() {
 				// Nothing to do
 				return;
 			} else {
-				// Loop through each POST
+				// Loop through each POST - DO NOT sanitize here, PayPal needs exact data back
 				foreach ( $_POST as $key => $value ) {
-				    // Sanitize the key
-                    $key = sanitize_key($key);
-
-                    // Sanitize the value
-                    $value = sanitize_text_field($value);
-
 					// Encode the value and append the data
 					$encoded_data .= $arg_separator."$key=" . urlencode( $value );
 				}
@@ -72,46 +66,38 @@ function wpeppsub_listen_for_paypal_ipn() {
 		// Get the PayPal redirect uri
 		$paypal_redirect = wpeppsub_get_paypal_redirect( true );
 		
-		//disable_paypal_verification setting
-		$bypass = '0';
+		// Validate the IPN with PayPal
+		wpeppsub_log("IPN - Starting PayPal verification.");
 		
-		if ( $bypass == '1' ) {
-			
-			// Validate the IPN
-			
-			$remote_post_vars      = array(
-				'method'           => 'POST',
-				'timeout'          => 45,
-				'redirection'      => 5,
-				'httpversion'      => '1.1',
-				'blocking'         => true,
-				'headers'          => array(
-					'host'         => 'www.paypal.com',
-					'connection'   => 'close',
-					'content-type' => 'application/x-www-form-urlencoded',
-					'post'         => '/cgi-bin/webscr HTTP/1.1',
-					
-				),
-				'sslverify'        => false,
-				'body'             => $encoded_data_array
-			);
-			
-			// Get response
-			$api_response = wp_remote_post( wpeppsub_get_paypal_redirect(), $remote_post_vars );
-			
-			if ( is_wp_error($api_response)) {
-				$error = json_encode($api_response);
-				wpeppsub_log("Invalid IPN verification response. IPN data:".$error);
-				return; // Something went wrong
-			}
-			
-			if ( $api_response['body'] !== 'VERIFIED' && wpeppsub_get_option( 'disable_paypal_verification', false)) {
-				$error = json_encode($api_response);
-				wpeppsub_log("Invalid IPN verification response. IPN data:".$error);
-				return; // Response not okay
-			}
-			
+		$remote_post_vars      = array(
+			'method'           => 'POST',
+			'timeout'          => 45,
+			'redirection'      => 5,
+			'httpversion'      => '1.1',
+			'blocking'         => true,
+			'headers'          => array(
+				'content-type' => 'application/x-www-form-urlencoded',
+			),
+			'sslverify'        => false,
+			'body'             => $encoded_data
+		);
+		
+		// Get response
+		$api_response = wp_remote_post( $paypal_redirect, $remote_post_vars );
+		
+		if ( is_wp_error($api_response)) {
+			$error = json_encode($api_response);
+			wpeppsub_log("IPN - Verification failed. Error: ".$error);
+			return; // Something went wrong
 		}
+		
+		if ( empty($api_response['body']) || $api_response['body'] !== 'VERIFIED' ) {
+			$error = json_encode($api_response);
+			wpeppsub_log("IPN - Verification failed. Response not VERIFIED: ".$error);
+			return; // Response not verified
+		}
+		
+		wpeppsub_log("IPN - PayPal verification successful (VERIFIED).");
 			
 		// Check if $post_data_array has been populated
 		if ( ! is_array( $encoded_data_array ) && !empty( $encoded_data_array ) ) {
@@ -174,16 +160,31 @@ function wpeppsub_listen_for_paypal_ipn() {
 					
 					if ($valuea['subscriber'] == "1") {
 						
-						$payer_email = $encoded_data_array['payer_email'];
-						
-						//$user_id = username_exists( $payer_email );
-						
-						if (email_exists($payer_email) == false) {
-							$random_password = wp_generate_password($length=12, $include_standard_special_chars=false);
-							$user_id = wp_create_user($payer_email, $random_password, $payer_email);
-							wp_send_new_user_notifications($user_id);
+						// Check if WordPress allows user registration
+						if ( ! get_option('users_can_register') ) {
+							wpeppsub_log("IPN - User registration is disabled in WordPress settings. Cannot create subscriber account.");
 						} else {
-							// user already exists
+							
+							$payer_email = $encoded_data_array['payer_email'];
+							
+							//$user_id = username_exists( $payer_email );
+							
+							if (email_exists($payer_email) == false) {
+								$random_password = wp_generate_password($length=12, $include_standard_special_chars=false);
+								$user_id = wp_create_user($payer_email, $random_password, $payer_email);
+								
+								// Only send notifications if user was created successfully
+								if ( ! is_wp_error($user_id) ) {
+									wp_send_new_user_notifications($user_id);
+									wpeppsub_log("IPN - Created new WordPress user account for: " . sanitize_email($payer_email));
+								} else {
+									wpeppsub_log("IPN - Failed to create user account. Error: " . $user_id->get_error_message());
+								}
+							} else {
+								// user already exists
+								wpeppsub_log("IPN - User account already exists for: " . sanitize_email($payer_email));
+							}
+						
 						}
 						
 					}

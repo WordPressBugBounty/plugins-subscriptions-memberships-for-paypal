@@ -4,9 +4,9 @@ Donate link: https://wpplugin.org/donate/
 Tags: PayPal, subscriptions, subscription, memberships, membership
 Author URI: https://wpplugin.org
 Requires at least: 3.5
-Tested up to: 6.7
+Tested up to: 6.9
 Requires PHP: 5.4
-Stable tag: 1.1.7
+Stable tag: 1.1.8
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -96,6 +96,10 @@ Yes, there is no limit to the amount you can put on one post / page, or your ent
 5. Page / Post button inserter
 
 == Changelog ==
+
+= 1.1.8 =
+* 11/17/25
+* Fix - Two security issues.
 
 = 1.1.7 =
 * 2/24/25
